@@ -37,10 +37,11 @@ module d_fix #(
     // Контроль границ параметров для тактирования паука
     localparam DUTY_8_VAL = (DUTY_8 >= 1 && DUTY_8 <= 7) ? DUTY_8 : 3;
  
-    // Ограничение задержек для всех трех сигналов (0-8 периодов)
-    localparam RAS_DELAY_VAL = (RAS_DELAY >= 0 && RAS_DELAY <= 8) ? RAS_DELAY : 0;
-    localparam CAS0_DELAY_VAL = (CAS0_DELAY >= 0 && CAS0_DELAY <= 8) ? CAS0_DELAY : 0;
-    localparam CAS1_DELAY_VAL = (CAS1_DELAY >= 0 && CAS1_DELAY <= 8) ? CAS1_DELAY : 0;
+    // Ограничение задержек для всех сигналов (0-8 периодов)
+	 localparam CPU_CLK_DELAY_VAL = (CPU_CLK_DELAY >= 0 && CPU_CLK_DELAY <= 8) ? CPU_CLK_DELAY : 0;
+    localparam RAS_DELAY_VAL     = (RAS_DELAY >= 0     && RAS_DELAY <= 8)     ? RAS_DELAY     : 0;
+    localparam CAS0_DELAY_VAL    = (CAS0_DELAY >= 0    && CAS0_DELAY <= 8)    ? CAS0_DELAY    : 0;
+    localparam CAS1_DELAY_VAL    = (CAS1_DELAY >= 0    && CAS1_DELAY <= 8)    ? CAS1_DELAY    : 0;
 
 	// ========== ДЕЛИТЕЛЬ ЧАСТОТЫ ==========
 	// Эта часть генерирует 8 МГц из 64 МГц
@@ -81,7 +82,7 @@ module d_fix #(
     // Используем вынесенный модуль signal_delay для каждого сигнала
 
     signal_delay #(
-        .DELAY(CPU_CLK_DELAY)
+        .DELAY(CPU_CLK_DELAY_VAL)
     ) cpu_clk_delay_inst (
         .clk(CLK_64MHZ),
         .reset_n(reset_n),
