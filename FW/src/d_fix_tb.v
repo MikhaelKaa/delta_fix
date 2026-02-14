@@ -22,9 +22,9 @@ module d_fix_tb;
     wire CPU_CLK_out;   // Выходной сигнал CPU_CLK (с задержкой)
     reg  RAS_in;        // Входной сигнал RAS
     wire RAS_out;       // Выходной сигнал RAS (с задержкой)
-    reg  CAS1_in;       // Входной сигнал CAS1
+    reg  CAS0_in;       // Входной сигнал CAS1
     wire CAS1_out;      // Выходной сигнал CAS1 (с задержкой)
-    reg  CAS2_in;       // Входной сигнал CAS2
+    reg  CAS1_in;       // Входной сигнал CAS2
     wire CAS2_out;      // Выходной сигнал CAS2 (с задержкой)
     
 
@@ -39,9 +39,9 @@ module d_fix_tb;
         .CPU_CLK_out    (CPU_CLK_out),
         .RAS_in         (RAS_in),
         .RAS_out        (RAS_out),
-        .CAS1_in        (CAS1_in),
+        .CAS0_in        (CAS0_in),
         .CAS1_out       (CAS1_out),
-        .CAS2_in        (CAS2_in),
+        .CAS1_in        (CAS1_in),
         .CAS2_out       (CAS2_out)        
     );
 
@@ -55,8 +55,8 @@ module d_fix_tb;
     initial begin
         // Инициализация
         RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CAS2_in     = 1'b0;
         CPU_CLK_in  = 1'b0;
 
         // Ждем снятия сброса
@@ -65,25 +65,25 @@ module d_fix_tb;
         // Короткий импульс (4 периода CLK_48MHZ)
         #(RAS_SHORT_START - RESET_DELAY);
         RAS_in      = 1'b1;
+        CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        CAS2_in     = 1'b1;
         CPU_CLK_in  = 1'b1;
         #(RAS_SHORT_DURATION * CLK_48MHZ_PERIOD);
         RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CAS2_in     = 1'b0;
         CPU_CLK_in  = 1'b0;
         
         // Длинный импульс (16 периодов CLK_48MHZ)
         #(RAS_LONG_START - RAS_SHORT_START - RAS_SHORT_DURATION * CLK_48MHZ_PERIOD);
         RAS_in      = 1'b1;
+        CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        CAS2_in     = 1'b1;
         CPU_CLK_in  = 1'b1;
         #(RAS_LONG_DURATION * CLK_48MHZ_PERIOD);
         RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CAS2_in     = 1'b0;
         CPU_CLK_in  = 1'b0;
 
     end

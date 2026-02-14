@@ -1,19 +1,19 @@
 `timescale 1ns / 1ps
-
+// файл в кодировке cp-1251 - нативная для квартуса.
 module d_fix #(
-    // Константа для управления скважностью сигнала 8 МГц (1-5)
-    parameter DUTY_8 = 2,      // По умолчанию 50% (3/6 = 50%)
-    // Константа для задержки CPU_CLK сигнала (периодов CLK_48MHZ)
-    parameter CPU_CLK_DELAY = 3,   // По умолчанию без задержки (0-8)
-    // Константа для задержки RAS сигнала (периодов CLK_48MHZ)
+    // Константа для управления скважностью сигнала 8 МГц (1-7)
+    parameter DUTY_8 = 3,      // По умолчанию 50% (4/8 = 50%)
+    // Константа для задержки CPU_CLK сигнала (периодов CLK_64MHZ)
+    parameter CPU_CLK_DELAY = 4,   // По умолчанию без задержки (0-8)
+    // Константа для задержки RAS сигнала (периодов CLK_64MHZ)
     parameter RAS_DELAY = 1,   // По умолчанию без задержки (0-8)
-    // Константа для задержки CAS1 сигнала (периодов CLK_48MHZ)
-    parameter CAS1_DELAY = 2,  // По умолчанию без задержки (0-8)
-    // Константа для задержки CAS2 сигнала (периодов CLK_48MHZ)
-    parameter CAS2_DELAY = 3   // По умолчанию без задержки (0-8)
+    // Константа для задержки CAS1 сигнала (периодов CLK_64MHZ)
+    parameter CAS0_DELAY = 1,  // По умолчанию без задержки (0-8)
+    // Константа для задержки CAS2 сигнала (периодов CLK_64MHZ)
+    parameter CAS1_DELAY = 1   // По умолчанию без задержки (0-8)
 )(
     // Main Clock
-    input   CLK_48MHZ,
+    input   CLK_64MHZ,
     // reset
     input   reset_n,
     // Delta ULA clock
@@ -26,53 +26,53 @@ module d_fix #(
     input   RAS_in,
     output  RAS_out,
 
-    input   CAS1_in,
-    output  CAS1_out,
+    input   CAS0_in,
+    output  CAS0_out,
 
-    input   CAS2_in,
-    output  CAS2_out
+    input   CAS1_in,
+    output  CAS1_out
     
 );
 
     // Контроль границ параметров для тактирования паука
-    localparam DUTY_8_VAL = (DUTY_8 >= 1 && DUTY_8 <= 5) ? DUTY_8 : 3;
+    localparam DUTY_8_VAL = (DUTY_8 >= 1 && DUTY_8 <= 7) ? DUTY_8 : 3;
  
     // Ограничение задержек для всех трех сигналов (0-8 периодов)
     localparam RAS_DELAY_VAL = (RAS_DELAY >= 0 && RAS_DELAY <= 8) ? RAS_DELAY : 0;
+    localparam CAS0_DELAY_VAL = (CAS0_DELAY >= 0 && CAS0_DELAY <= 8) ? CAS0_DELAY : 0;
     localparam CAS1_DELAY_VAL = (CAS1_DELAY >= 0 && CAS1_DELAY <= 8) ? CAS1_DELAY : 0;
-    localparam CAS2_DELAY_VAL = (CAS2_DELAY >= 0 && CAS2_DELAY <= 8) ? CAS2_DELAY : 0;
 
-    // ========== ДЕЛИТЕЛЬ ЧАСТОТЫ ==========
-    // Эта часть генерирует 8 МГц из 48 МГц
-    reg [5:0] counter_8 = 6'b0;    // Счетчик для 8 МГц (0-5, период 6 тактов)
-    reg clk_8 = 1'b0;
+	// ========== ДЕЛИТЕЛЬ ЧАСТОТЫ ==========
+	// Эта часть генерирует 8 МГц из 64 МГц
+	reg [2:0] counter_8 = 3'b0;    // Счетчик для 8 МГц (0-7, период 8 тактов)
+	reg clk_8 = 1'b0;
 
-    // Счетчик для 8 МГц - 6 состояний (48/8 = 6)
-    always @(negedge CLK_48MHZ or negedge reset_n) begin
-        if (!reset_n) begin
-            counter_8 <= 6'b0;
-        end else begin
-            if (counter_8 < 5) begin
-                counter_8 <= counter_8 + 1'b1;
-            end else begin
-                counter_8 <= 6'b0;
-            end
-        end
-    end
+	// Счетчик для 8 МГц - 8 состояний (64/8 = 8)
+	always @(negedge CLK_64MHZ or negedge reset_n) begin
+		 if (!reset_n) begin
+			  counter_8 <= 3'b0;
+		 end else begin
+			  if (counter_8 < 7) begin          // считаем 0..7, затем сброс
+					counter_8 <= counter_8 + 1'b1;
+			  end else begin
+					counter_8 <= 3'b0;
+			  end
+		 end
+	end
 
-    // Генерация 8 МГц с регулируемой скважностью
-    always @(negedge CLK_48MHZ or negedge reset_n) begin
-        if (!reset_n) begin
-            clk_8 <= 1'b0;
-        end else begin
-            // Установка скважности
-            if (counter_8 < DUTY_8_VAL) begin
-                clk_8 <= 1'b1;
-            end else begin
-                clk_8 <= 1'b0;
-            end
-        end
-    end
+	// Генерация 8 МГц с регулируемой скважностью
+	always @(negedge CLK_64MHZ or negedge reset_n) begin
+		 if (!reset_n) begin
+			  clk_8 <= 1'b0;
+		 end else begin
+			  // Установка скважности (DUTY_8_VAL должно быть в диапазоне 0..7)
+			  if (counter_8 < DUTY_8_VAL) begin
+					clk_8 <= 1'b1;
+			  end else begin
+					clk_8 <= 1'b0;
+			  end
+		 end
+	end
 
     assign CLK_8MHZ = clk_8;
     // ========== КОНЕЦ ДЕЛИТЕЛЯ ЧАСТОТЫ ==========
@@ -83,7 +83,7 @@ module d_fix #(
     signal_delay #(
         .DELAY(CPU_CLK_DELAY)
     ) cpu_clk_delay_inst (
-        .clk(CLK_48MHZ),
+        .clk(CLK_64MHZ),
         .reset_n(reset_n),
         .signal_in(CPU_CLK_in),
         .signal_out(CPU_CLK_out)
@@ -92,35 +92,35 @@ module d_fix #(
     signal_delay #(
         .DELAY(RAS_DELAY_VAL)
     ) ras_delay_inst (
-        .clk(CLK_48MHZ),
+        .clk(CLK_64MHZ),
         .reset_n(reset_n),
         .signal_in(RAS_in),
         .signal_out(RAS_out)
     );
 
     signal_delay #(
-        .DELAY(CAS1_DELAY_VAL)
+        .DELAY(CAS0_DELAY_VAL)
     ) cas1_delay_inst (
-        .clk(CLK_48MHZ),
+        .clk(CLK_64MHZ),
         .reset_n(reset_n),
-        .signal_in(CAS1_in),
-        .signal_out(CAS1_out)
+        .signal_in(CAS0_in),
+        .signal_out(CAS0_out)
     );
 
     signal_delay #(
-        .DELAY(CAS2_DELAY_VAL)
+        .DELAY(CAS1_DELAY_VAL)
     ) cas2_delay_inst (
-        .clk(CLK_48MHZ),
+        .clk(CLK_64MHZ),
         .reset_n(reset_n),
-        .signal_in(CAS2_in),
-        .signal_out(CAS2_out)
+        .signal_in(CAS1_in),
+        .signal_out(CAS1_out)
     );
 
 endmodule
 
 // ========== МОДУЛЬ ЗАДЕРЖКИ СИГНАЛА ==========
 // Общий модуль для задержки сигналов на заданное число тактов
-// Параметр DELAY: 0-8 периодов CLK_48MHZ
+// Параметр DELAY: 0-8 периодов CLK_64MHZ
 // Особенности:
 // - DELAY=0: задержка 0
 // - DELAY=1: задержка 1 такт
