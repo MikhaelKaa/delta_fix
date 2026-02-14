@@ -13,12 +13,15 @@ module d_fix_tb;
     localparam RAS_SHORT_START = 1320;    // Начало короткого импульса
     localparam RAS_LONG_START = 1640;     // Начало длинного импульса 
 
+    // Параметр фазовой задержки CPU_CLK_in (в тактах 64 МГц, 0..8)
+    localparam CPU_CLK_PHASE_DELAY = 5;   // 0 - без задержки, 1..8 - задержка на N тактов
+
     // Сигналы для подключения к тестируемому модулю (DUT)
     reg  CLK_64MHZ;
     reg  reset_n;
     wire CLK_8MHZ;
 
-    reg  CPU_CLK_in;    // Входной сигнал CPU_CLK
+    wire CPU_CLK_in;    // Входной сигнал CPU_CLK (генерируется отдельно)
     wire CPU_CLK_out;   // Выходной сигнал CPU_CLK (с задержкой)
     reg  RAS_in;        // Входной сигнал RAS
     wire RAS_out;       // Выходной сигнал RAS (с задержкой)
@@ -27,9 +30,11 @@ module d_fix_tb;
     reg  CAS1_in;       // Входной сигнал CAS1
     wire CAS1_out;      // Выходной сигнал CAS1 (с задержкой)
     
+    // Внутренние сигналы для генерации CPU_CLK_in
+    reg  cpu_base;              // базовая частота 4 МГц (без фазового сдвига)
+    wire cpu_phase_shifted;     // после задержки
 
     // 1. Инстанцирование тестируемого модуля (DUT)
-    // Устанавливаем задержку RAS, например, на 2 периода CLK_64MHZ
     d_fix dut (
         .CLK_64MHZ      (CLK_64MHZ),
         .reset_n        (reset_n),
@@ -51,13 +56,12 @@ module d_fix_tb;
         forever #(CLK_64MHZ_PERIOD / 2) CLK_64MHZ = ~CLK_64MHZ;
     end
 
-    // 3. Генерация сигналов RAS
+    // 3. Генерация сигналов RAS, CAS
     initial begin
         // Инициализация
         RAS_in      = 1'b0;
         CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CPU_CLK_in  = 1'b0;
 
         // Ждем снятия сброса
         #RESET_DELAY;
@@ -67,28 +71,45 @@ module d_fix_tb;
         RAS_in      = 1'b1;
         CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        CPU_CLK_in  = 1'b1;
         #(RAS_SHORT_DURATION * CLK_64MHZ_PERIOD);
         RAS_in      = 1'b0;
         CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CPU_CLK_in  = 1'b0;
         
         // Длинный импульс (16 периодов CLK_64MHZ)
         #(RAS_LONG_START - RAS_SHORT_START - RAS_SHORT_DURATION * CLK_64MHZ_PERIOD);
         RAS_in      = 1'b1;
         CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        CPU_CLK_in  = 1'b1;
         #(RAS_LONG_DURATION * CLK_64MHZ_PERIOD);
         RAS_in      = 1'b0;
         CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        CPU_CLK_in  = 1'b0;
-
     end
 
-    // 4. Последовательность сброса и управление симуляцией
+    // 4. Генерация CPU_CLK_in с частотой 4 МГц и дискретной фазой
+    // Формируем базовый сигнал делением CLK_8MHZ на 2
+    always @(posedge CLK_8MHZ or negedge reset_n) begin
+        if (!reset_n)
+            cpu_base <= 1'b0;
+        else
+            cpu_base <= ~cpu_base;
+    end
+
+    // Модуль задержки для создания фазового сдвига (используется signal_delay из d_fix.v)
+    signal_delay #(
+        .DELAY(CPU_CLK_PHASE_DELAY)
+    ) cpu_phase_delay (
+        .clk        (CLK_64MHZ),
+        .reset_n    (reset_n),
+        .signal_in  (cpu_base),
+        .signal_out (cpu_phase_shifted)
+    );
+
+    // Подключаем сдвинутый сигнал ко входу DUT
+    assign CPU_CLK_in = cpu_phase_shifted;
+
+    // 5. Последовательность сброса и управление симуляцией
     initial begin
         // Инициализация сигналов
         reset_n = 1'b0; // Активный низкий уровень - модуль в сбросе
