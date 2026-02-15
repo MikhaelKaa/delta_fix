@@ -6,12 +6,6 @@ module d_fix_tb;
     localparam CLK_64MHZ_PERIOD = 15.625; // 64 МГц -> 15.625 нс
     localparam RESET_DELAY = 1000;        // Длительность сброса = 1000 нс 
     localparam SIM_TIME = 160_000;        // Общее время симуляции = 160 мкс
-    
-    // Параметры для RAS сигналов
-    localparam RAS_SHORT_DURATION = 4;    // 4 периода CLK_64MHZ (короткий импульс)
-    localparam RAS_LONG_DURATION = 16;    // 16 периодов CLK_64MHZ (длинный импульс)
-    localparam RAS_SHORT_START = 1320;    // Начало короткого импульса
-    localparam RAS_LONG_START = 1640;     // Начало длинного импульса 
 
     // Параметр фазовой задержки CPU_CLK_in (в тактах 64 МГц, 0..8)
     localparam CPU_CLK_PHASE_DELAY = 5;   // 0 - без задержки, 1..8 - задержка на N тактов
@@ -56,7 +50,7 @@ module d_fix_tb;
         forever #(CLK_64MHZ_PERIOD / 2) CLK_64MHZ = ~CLK_64MHZ;
     end
 
-    // 3. Генерация сигналов RAS, CAS
+    // 3. Генерация сигналов RAS, CAS в соответствии с заданной последовательностью
     initial begin
         // Инициализация
         RAS_in      = 1'b0;
@@ -66,25 +60,54 @@ module d_fix_tb;
         // Ждем снятия сброса
         #RESET_DELAY;
         
-        // Короткий импульс (4 периода CLK_64MHZ)
-        #(RAS_SHORT_START - RESET_DELAY);
+        // --- Часть 1 ---
+        #460;  // низкий уровень (460 нс)
         RAS_in      = 1'b1;
         CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        #(RAS_SHORT_DURATION * CLK_64MHZ_PERIOD);
+        #170;  // высокий уровень (170 нс)
         RAS_in      = 1'b0;
         CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
-        
-        // Длинный импульс (16 периодов CLK_64MHZ)
-        #(RAS_LONG_START - RAS_SHORT_START - RAS_SHORT_DURATION * CLK_64MHZ_PERIOD);
+        #60;   // низкий уровень (60 нс)
         RAS_in      = 1'b1;
         CAS0_in     = 1'b1;
         CAS1_in     = 1'b1;
-        #(RAS_LONG_DURATION * CLK_64MHZ_PERIOD);
+        #25;   // высокий уровень (25 нс) <--- иголка
         RAS_in      = 1'b0;
         CAS0_in     = 1'b0;
         CAS1_in     = 1'b0;
+        #460;  // низкий уровень (460 нс)
+        RAS_in      = 1'b1;
+        CAS0_in     = 1'b1;
+        CAS1_in     = 1'b1;
+        #170;  // высокий уровень (170 нс)
+        RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
+        CAS1_in     = 1'b0;
+
+        // Пауза 2000 нс (низкий уровень)
+        #2000;
+
+        // --- Часть 2 ---
+        #460;  // низкий уровень (460 нс)
+        RAS_in      = 1'b1;
+        CAS0_in     = 1'b1;
+        CAS1_in     = 1'b1;
+        #170;  // высокий уровень (170 нс)
+        RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
+        CAS1_in     = 1'b0;
+        #530;  // низкий уровень (530 нс)
+        RAS_in      = 1'b1;
+        CAS0_in     = 1'b1;
+        CAS1_in     = 1'b1;
+        #170;  // высокий уровень (170 нс)
+        RAS_in      = 1'b0;
+        CAS0_in     = 1'b0;
+        CAS1_in     = 1'b0;
+
+        // Далее сигналы остаются низкими до конца симуляции
     end
 
     // 4. Генерация CPU_CLK_in с частотой 4 МГц и дискретной фазой
