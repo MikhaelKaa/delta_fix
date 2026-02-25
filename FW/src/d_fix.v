@@ -143,7 +143,7 @@ module d_fix #(
     ) cas1_filter_inst (
         .clk(CLK_64MHZ),
         .reset_n(reset_n),
-        .signal_in(CAS1_in),
+        .signal_in(~CAS1_in),
         .signal_out(cas1_filtered)
     );
     signal_delay #(
@@ -151,7 +151,7 @@ module d_fix #(
     ) cas1_delay_inst (
         .clk(CLK_64MHZ),
         .reset_n(reset_n),
-        .signal_in(cas1_filtered),
+        .signal_in(~cas1_filtered),
         .signal_out(CAS1_out)
     );
 
